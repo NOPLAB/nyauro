@@ -64,7 +64,7 @@ type Response struct {
 }
 
 func NewsletterWorker(d *discordgo.Session, i *discordgo.InteractionCreate, args RunArgument) {
-	v, err := JoinVoiceChannel(d, i)
+	v, err := JoinVoiceChannelWithInteraction(d, i)
 	if err != nil {
 		return
 	}
@@ -102,15 +102,24 @@ func NewsletterWorker(d *discordgo.Session, i *discordgo.InteractionCreate, args
 	}
 
 	// for {
-	PlayText(v, dir, "速報でもないニュース速報です")
+
+	PlayText(v, dir, "番組の途中ですが、ここで速報でもないニュース速報です")
 
 	t := time.Now().Local()
-	text := "現在時刻," + fmt.Sprint(t.Hour()) + "時" + fmt.Sprint(t.Minute()) + "分だと思います"
+	text := "現在時刻は体内時計で" + fmt.Sprint(t.Hour()) + "時" + fmt.Sprint(t.Minute()) + "分くらいだと思います"
 	// text := "UTC時刻は" + fmt.Sprint(t.Unix()) + "です。"
 	PlayText(v, dir, text)
 
-	text = "現在の気温は" + fmt.Sprintf("%.1f", w_res.Main.Temp-273.15) + "度です"
+	text = "現在の気温は体感、" + fmt.Sprintf("%.1f", w_res.Main.Temp-273.15) + "度くらいな気がします"
 	PlayText(v, dir, text)
+
+	if w_res.Main.Temp-273.15 > 30 {
+		PlayText(v, dir, "暑いです、アイスが食べたいです")
+	} else if w_res.Main.Temp-273.15 < 10 {
+		PlayText(v, dir, "寒いです、お布団に入りたいです")
+	} else if w_res.Main.Temp-273.15 < 0 {
+		PlayText(v, dir, "雪降らないかな、雪だるま作りたいです")
+	}
 
 	// time.Sleep(10 * time.Second)
 	// }

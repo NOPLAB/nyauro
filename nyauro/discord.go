@@ -1,9 +1,11 @@
 package nyauro
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -24,6 +26,18 @@ func Run(args RunArgument) error {
 			Name:        "newsletter",
 			Description: "時報をボイスチャットで話すよ",
 		},
+		{
+			Name:        "clock",
+			Description: "時報をボイスチャットで話すよ",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        "enable",
+					Description: "時報を切り替えるよ",
+					Required:    true,
+				},
+			},
+		},
 	}
 	commandHandlers := map[string]func(d *discordgo.Session, i *discordgo.InteractionCreate){
 		"speech-to-text": func(d *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -31,6 +45,9 @@ func Run(args RunArgument) error {
 		},
 		"newsletter": func(d *discordgo.Session, i *discordgo.InteractionCreate) {
 			go NewsletterWorker(d, i, args)
+		},
+		"clock": func(d *discordgo.Session, i *discordgo.InteractionCreate) {
+			go ClockWorker(d, i, args)
 		},
 	}
 
@@ -47,6 +64,31 @@ func Run(args RunArgument) error {
 
 	d.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Println("Bot is up!")
+	})
+
+	cancel_map := make(map[string]context.CancelFunc)
+	defer func() {
+		for _, cancel := range cancel_map {
+			cancel()
+		}
+	}()
+	d.AddHandler(func(s *discordgo.Session, i *discordgo.VoiceStateUpdate) {
+		if (i.BeforeUpdate == nil || i.BeforeUpdate.ChannelID == "") && i.ChannelID != "" {
+			log.Println("Join user: ", i.Member.User.Username)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel_map[i.UserID] = cancel
+			go JoinTimerWorker(s, i.UserID, i.GuildID, 30*time.Minute, ctx)
+		}
+		if i.BeforeUpdate != nil && i.BeforeUpdate.ChannelID != "" && i.ChannelID == "" {
+			log.Println("leave user: ", i.Member.User.Username)
+
+			cancel, ok := cancel_map[i.UserID]
+			if ok {
+				log.Println("cancel: ", i.Member.User.Username)
+				cancel()
+			}
+		}
 	})
 
 	d.Identify.Intents = discordgo.IntentsAll

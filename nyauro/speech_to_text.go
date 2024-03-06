@@ -22,7 +22,7 @@ type SpeechToTextWorkerArgument struct {
 }
 
 func SpeechToTextWorker(d *discordgo.Session, i *discordgo.InteractionCreate, args RunArgument) {
-	v, err := JoinVoiceChannel(d, i)
+	v, err := JoinVoiceChannelWithInteraction(d, i)
 	if err != nil {
 		return
 	}
